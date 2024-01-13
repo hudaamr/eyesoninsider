@@ -1,0 +1,19 @@
+outlier_fraction = 0.028
+final_data.head()
+final_data.columns
+data_new.head()
+model =  IsolationForest(n_jobs=-1, n_estimators=200, max_features=3, random_state=RANDOM_STATE, contamination=outlier_fraction)
+model.fit(data_new)
+# add the data to the main
+final_data['anomaly_isolated'] = pd.Series(model.predict(data_new))
+final_data['anomaly_isolated'] = final_data['anomaly_isolated'].map( {1: 0, -1: 1} )
+final_data['anomaly_isolated'].value_counts()
+sns.scatterplot(
+    x="tsne-2d-one", y="tsne-2d-two",
+    hue="anomaly_isolated",
+#     palette=sns.color_palette("hls", 10),
+    data=final_data,
+    legend="full",
+    alpha=1
+)
+final_data.loc[final_data['anomaly_isolated']==1]	
