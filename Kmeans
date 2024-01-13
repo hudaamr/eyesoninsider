@@ -1,0 +1,23 @@
+ip_map = final_data[ip_col].to_dict()
+RANDOM_STATE = 123
+final_data.columns
+feature_cols = ['total_count', 'daily_counts', 'is_weekend_ratio', 'td_mean', 'td_max']
+data_new = final_data[feature_cols]
+min_max_scaler = preprocessing.MinMaxScaler()
+np_scaled = min_max_scaler.fit_transform(data_new)
+data_new = pd.DataFrame(np_scaled, columns=feature_cols)
+sns.pairplot(final_data[feature_cols])
+sns.pairplot(data_new)
+n_cluster = range(1, 15)
+kmeans = [KMeans(n_clusters=i, random_state=RANDOM_STATE).fit(data_new) for i in n_cluster]
+scores = [kmeans[i].score(data_new) for i in range(len(kmeans))]
+fig, ax = plt.subplots()
+ax.plot(n_cluster, scores)
+plt.show()
+cluster_model = kmeans[5]
+final_data['cluster'] = cluster_model.predict(data_new)
+final_data['cluster'].value_counts()
+tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300, random_state=RANDOM_STATE)
+tsne_results = tsne.fit_transform(data_new)
+final_data['tsne-2d-one'] = tsne_results[:,0]
+final_data['tsne-2d-two'] = tsne_results[:,1]
