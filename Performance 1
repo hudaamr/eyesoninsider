@@ -1,0 +1,32 @@
+total_counts_condition = (final_data['total_count'] >= final_data['total_count'].quantile(0.98))
+daily_counts_condition =  (final_data['daily_counts'] >= final_data['daily_counts'].quantile(0.98))
+final_data['anomaly_manual'] = (total_counts_condition | daily_counts_condition).astype(np.int)
+final_data.head()
+from sklearn.metrics import f1_score, roc_auc_score, accuracy_score, confusion_matrix
+def get_sensitivity_specificity(y_true, y_pred):
+    cf = confusion_matrix(y_true, y_pred)
+    sensitivity = cf[0,0]/(cf[:,0].sum())
+    specificity = cf[1,1]/(cf[:,1].sum())
+    return sensitivity, specificity
+f1_iso = f1_score(final_data['anomaly_manual'],final_data['anomaly_isolated'])
+acc_iso = accuracy_score(final_data['anomaly_manual'],final_data['anomaly_isolated'])
+roc_iso = roc_auc_score(final_data['anomaly_manual'],final_data['anomaly_isolated'])
+sen_iso, spec_iso = get_sensitivity_specificity(final_data['anomaly_manual'],final_data['anomaly_isolated'])
+met_iso = {
+           'f1_score': f1_iso,
+           'accuracy': acc_iso,
+           'roc_score': roc_iso,
+           'sensitivity': sen_iso,
+           'specificity': spec_iso
+          }
+f1_kmeans = f1_score(final_data['anomaly_manual'],final_data['anomaly_kmeans'])
+acc_kmeans = accuracy_score(final_data['anomaly_manual'],final_data['anomaly_kmeans'])
+roc_kmeans = roc_auc_score(final_data['anomaly_manual'],final_data['anomaly_kmeans'])
+sen_kmeans, spec_kmeans = get_sensitivity_specificity(final_data['anomaly_manual'],final_data['anomaly_kmeans'])
+met_kmeans = {
+           'f1_score': f1_kmeans,
+           'accuracy': acc_kmeans,
+           'roc_score': roc_kmeans,
+           'sensitivity': sen_kmeans,
+           'specificity': spec_kmeans
+          }
