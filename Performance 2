@@ -1,0 +1,30 @@
+f1_kmeans = f1_score(final_data['anomaly_manual'],final_data['anomaly_kmeans'])
+acc_kmeans = accuracy_score(final_data['anomaly_manual'],final_data['anomaly_kmeans'])
+roc_kmeans = roc_auc_score(final_data['anomaly_manual'],final_data['anomaly_kmeans'])
+sen_kmeans, spec_kmeans = get_sensitivity_specificity(final_data['anomaly_manual'],final_data['anomaly_kmeans'])
+met_kmeans = {
+           'f1_score': f1_kmeans,
+           'accuracy': acc_kmeans,
+           'roc_score': roc_kmeans,
+           'sensitivity': sen_kmeans,
+           'specificity': spec_kmeans
+          }
+
+f1_svm = f1_score(final_data['anomaly_manual'],final_data['anomaly_svm'])
+acc_svm = accuracy_score(final_data['anomaly_manual'],final_data['anomaly_svm'])
+roc_svm = roc_auc_score(final_data['anomaly_manual'],final_data['anomaly_svm'])
+sen_svm, spec_svm = get_sensitivity_specificity(final_data['anomaly_manual'],final_data['anomaly_svm'])
+met_svm = {
+           'f1_score': f1_svm,
+           'accuracy': acc_svm,
+           'roc_score': roc_svm,
+           'sensitivity': sen_svm,
+           'specificity': spec_svm
+          }
+
+metrics = {'isolated_forest': met_iso,
+           'kmeans': met_kmeans,
+           'svm': met_svm
+          }
+metrics_df = pd.DataFrame.from_dict(metrics)
+metrics_df
