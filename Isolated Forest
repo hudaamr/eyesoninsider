@@ -1,3 +1,5 @@
+
+RANDOM_STATE=123
 outlier_fraction = 0.028
 final_data.head()
 final_data.columns
