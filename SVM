@@ -1,0 +1,19 @@
+RANDOM_STATE = 123
+model =  OneClassSVM(nu=outlier_fraction, random_state=RANDOM_STATE, degree=2, kernel='rbf')
+data_new_clean = data_new.loc[data_new.total_count <=data_new.total_count.quantile(1-outlier_fraction)]
+model.fit(data_new_clean)
+model =  OneClassSVM(nu=outlier_fraction, random_state=RANDOM_STATE, degree=2, kernel='rbf')
+data_new_clean = data_new.loc[data_new.total_count <=data_new.total_count.quantile(1-outlier_fraction)]
+model.fit(data_new_clean)
+inal_data['anomaly_svm'] = pd.Series(model.predict(data_new))
+final_data['anomaly_svm'] = final_data['anomaly_svm'].map( {1: 0, -1: 1} )
+final_data['anomaly_svm'].value_counts()
+sns.scatterplot(
+    x="tsne-2d-one", y="tsne-2d-two",
+    hue="anomaly_svm",
+#     palette=sns.color_palette("hls", 10),
+    data=final_data,
+    legend="full",
+    alpha=1
+)
+final_data.loc[final_data['anomaly_svm']==1]
