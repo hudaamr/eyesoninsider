@@ -1,4 +1,5 @@
 RANDOM_STATE = 123
+outlier_fraction = 0.028
 model =  OneClassSVM(nu=outlier_fraction, random_state=RANDOM_STATE, degree=2, kernel='rbf')
 data_new_clean = data_new.loc[data_new.total_count <=data_new.total_count.quantile(1-outlier_fraction)]
 model.fit(data_new_clean)
