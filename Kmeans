@@ -1,66 +1,32 @@
-ip_map = final_data[ip_col].to_dict()
-RANDOM_STATE = 123
-final_data.columns
-feature_cols = ['total_count', 'daily_counts', 'is_weekend_ratio', 'td_mean', 'td_max']
-data_new = final_data[feature_cols]
-min_max_scaler = preprocessing.MinMaxScaler()
-np_scaled = min_max_scaler.fit_transform(data_new)
-data_new = pd.DataFrame(np_scaled, columns=feature_cols)
-sns.pairplot(final_data[feature_cols])
-sns.pairplot(data_new)
-n_cluster = range(1, 15)
-kmeans = [KMeans(n_clusters=i, random_state=RANDOM_STATE).fit(data_new) for i in n_cluster]
-scores = [kmeans[i].score(data_new) for i in range(len(kmeans))]
-fig, ax = plt.subplots()
-ax.plot(n_cluster, scores)
+features = ['time_since_last_event_user', 'time_since_last_event_content',
+            'time_since_last_session', 'average_time_between_interactions',
+            'session_duration', 'average_session_duration_user']
+
+X = data[features]
+X.fillna(X.mean(), inplace=True)
+X[features] = X[features].apply(pd.to_timedelta)
+
+X[features] = X[features].apply(lambda x: x.dt.total_seconds())
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+kmeans = KMeans(n_clusters=2)  # You can adjust the number of clusters based on your dataset
+
+kmeans.fit(X_scaled)
+cluster_labels = kmeans.labels_
+threshold_kmeans = 0 # You may need to experiment with this threshold
+data['anomaly_kmeans'] = 'Normal'  # Initialize with 'Normal'
+data.loc[cluster_labels == 1, 'anomaly_kmeans'] = 'Abnormal'
+
+data['anomaly_manual_kmeans'] = data['anomaly_kmeans'].map({'Abnormal': 1, 'Normal': 0})
+
+plt.figure(figsize=(8, 8))
+labels = ['Normal', 'Abnormal']
+sizes = data['anomaly_manual_kmeans'].value_counts()
+colors = ['skyblue', 'lightcoral']
+explode = (0, 0.1)  # Explode the 'Abnormal' slice for emphasis
+
+plt.pie(sizes, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90, explode=explode)
+plt.title('Distribution of Anomalies and Normal Actions (K-Means)')
+plt.axis('equal')  # Equal aspect ratio ensures the pie chart is circular.
 plt.show()
-cluster_model = kmeans[5]
-final_data['cluster'] = cluster_model.predict(data_new)
-final_data['cluster'].value_counts()
-tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300, random_state=RANDOM_STATE)
-tsne_results = tsne.fit_transform(data_new)
-final_data['tsne-2d-one'] = tsne_results[:,0]
-final_data['tsne-2d-two'] = tsne_results[:,1]
-tsne_cluster = final_data.groupby('cluster').agg({'tsne-2d-one':'mean', 'tsne-2d-two':'mean'}).reset_index()
-plt.figure(figsize=(16,10))
-
-sns.scatterplot(
-    x="tsne-2d-one", y="tsne-2d-two",
-    hue="cluster",
-    palette=sns.color_palette("hls", 6),
-    data=final_data,
-    legend="full",
-    alpha=1
-)
-
-plt.scatter(x="tsne-2d-one", y="tsne-2d-two", data=tsne_cluster, s=100, c='b')
-
-plt.show()
-centers = cluster_model.cluster_centers_
-points = np.asarray(data_new)
-total_distance = pd.Series()
-def get_sum_square_distance(data, cluster_model, feature_cols):
-    centers = cluster_model.cluster_centers_
-    points = np.asarray(data[feature_cols])
-    total_distance = pd.Series()
-    for i in range(len(points)):
-        distance = 0
-        for j in range(len(centers)):
-            a = np.linalg.norm(points[i] - centers[j])
-            distance += a**2
-        total_distance.at[i] = distance
-
-    return total_distance
-final_data['ssd'] = get_sum_square_distance(data_new, cluster_model,feature_cols)
-plt.hist(final_data['ssd'], bins=100)
-cutoff = 6
-final_data['anomaly_kmeans'] = (final_data['ssd'] >= cutoff).astype(int)
-sns.scatterplot(
-    x="tsne-2d-one", y="tsne-2d-two",
-    hue="anomaly_kmeans",
-#     palette=sns.color_palette("hls", 10),
-    data=final_data,
-    legend="full",
-    alpha=1
-)
-final_data.loc[final_data['anomaly_kmeans']==1]
