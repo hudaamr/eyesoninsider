@@ -1,20 +1,39 @@
-RANDOM_STATE = 123
-outlier_fraction = 0.028
-model =  OneClassSVM(nu=outlier_fraction, random_state=RANDOM_STATE, degree=2, kernel='rbf')
-data_new_clean = data_new.loc[data_new.total_count <=data_new.total_count.quantile(1-outlier_fraction)]
-model.fit(data_new_clean)
-model =  OneClassSVM(nu=outlier_fraction, random_state=RANDOM_STATE, degree=2, kernel='rbf')
-data_new_clean = data_new.loc[data_new.total_count <=data_new.total_count.quantile(1-outlier_fraction)]
-model.fit(data_new_clean)
-inal_data['anomaly_svm'] = pd.Series(model.predict(data_new))
-final_data['anomaly_svm'] = final_data['anomaly_svm'].map( {1: 0, -1: 1} )
-final_data['anomaly_svm'].value_counts()
-sns.scatterplot(
-    x="tsne-2d-one", y="tsne-2d-two",
-    hue="anomaly_svm",
-#     palette=sns.color_palette("hls", 10),
-    data=final_data,
-    legend="full",
-    alpha=1
-)
-final_data.loc[final_data['anomaly_svm']==1]
+
+features = ['time_since_last_event_user', 'time_since_last_event_content',
+            'time_since_last_session', 'average_time_between_interactions',
+            'session_duration', 'average_session_duration_user']
+
+
+X = data[features]
+
+X.fillna(X.mean(), inplace=True)
+
+
+X[features] = X[features].apply(pd.to_timedelta)
+
+
+X[features] = X[features].apply(lambda x: x.dt.total_seconds())
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+model = OneClassSVM(nu=0.05)  # You can adjust the 'nu' parameter based on your dataset
+
+model.fit(X_scaled)
+anomaly_scores = model.decision_function(X_scaled)
+threshold =  0
+data['anomaly_svm'] = anomaly_scores
+data['anomaly_manual'] = 'Normal'  # Initialize with 'Normal'
+data.loc[data['anomaly_svm'] >= threshold, 'anomaly_manual'] = 'Abnormal'
+
+data['anomaly_manual'] = data['anomaly_manual'].map({'Abnormal': 1, 'Normal': 0})
+
+plt.figure(figsize=(8, 8))
+labels = ['Normal', 'Abnormal']
+sizes = data['anomaly_manual'].value_counts()
+colors = ['lightblue', 'salmon']
+explode = (0, 0.1)  # Explode the 'Abnormal' slice for better visibility
+
+plt.pie(sizes, labels=labels, autopct='%1.1f%%', colors=colors, explode=explode, startangle=140)
+plt.title('Distribution of Anomalies and Normal Actions(SVM) ')
+plt.show()
