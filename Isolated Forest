@@ -1,21 +1,48 @@
 
-RANDOM_STATE=123
-outlier_fraction = 0.028
-final_data.head()
-final_data.columns
-data_new.head()
-model =  IsolationForest(n_jobs=-1, n_estimators=200, max_features=3, random_state=RANDOM_STATE, contamination=outlier_fraction)
-model.fit(data_new)
-# add the data to the main
-final_data['anomaly_isolated'] = pd.Series(model.predict(data_new))
-final_data['anomaly_isolated'] = final_data['anomaly_isolated'].map( {1: 0, -1: 1} )
-final_data['anomaly_isolated'].value_counts()
-sns.scatterplot(
-    x="tsne-2d-one", y="tsne-2d-two",
-    hue="anomaly_isolated",
-#     palette=sns.color_palette("hls", 10),
-    data=final_data,
-    legend="full",
-    alpha=1
-)
-final_data.loc[final_data['anomaly_isolated']==1]	
+features = ['time_since_last_event_user', 'time_since_last_event_content',
+            'time_since_last_session', 'average_time_between_interactions',
+            'session_duration', 'average_session_duration_user']
+
+X = data[features]
+
+X.fillna(X.mean(), inplace=True)
+
+
+X[features] = X[features].apply(pd.to_timedelta)
+
+
+X[features] = X[features].apply(lambda x: x.dt.total_seconds())
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+model_iforest = IsolationForest(contamination=0.05)  # You can adjust the 'contamination' parameter based on your dataset
+
+
+model_iforest.fit(X_scaled)
+anomaly_scores_iforest = model_iforest.decision_function(X_scaled)
+
+
+threshold_iforest = 0  
+data['anomaly_iforest'] = anomaly_scores_iforest
+data['anomaly_manual_iforest'] = 'Normal'  # Initialize with 'Normal'
+data.loc[data['anomaly_iforest'] <= threshold_iforest, 'anomaly_manual_iforest'] = 'Abnormal'
+data['anomaly_manual_iforest'] = data['anomaly_manual_iforest'].map({'Abnormal': 1, 'Normal': 0})
+
+f1_iforest = f1_score(data['anomaly_manual_iforest'], data['anomaly_iforest'] <= threshold_iforest)
+cf_iforest = confusion_matrix(data['anomaly_manual_iforest'], data['anomaly_iforest'] <= threshold_iforest)
+sen_iforest = cf_iforest[0, 0] / (cf_iforest[:, 0].sum())
+
+print(f"F1 Score (Isolation Forest): {f1_iforest}")
+print(f"Sensitivity (Isolation Forest): {sen_iforest}")
+
+
+plt.figure(figsize=(8, 8))
+labels_iforest = ['Normal', 'Abnormal']
+sizes_iforest = data['anomaly_manual_iforest'].value_counts()
+colors_iforest = ['lightblue', 'salmon']
+explode_iforest = (0, 0.1)  # Explode the 'Abnormal' slice for better visibility
+
+plt.pie(sizes_iforest, labels=labels_iforest, autopct='%1.1f%%', colors=colors_iforest, explode=explode_iforest, startangle=140)
+plt.title('Distribution of Anomalies and Normal Actions (Isolation Forest)')
+plt.show()
